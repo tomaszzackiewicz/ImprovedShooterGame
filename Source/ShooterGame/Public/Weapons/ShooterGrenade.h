@@ -31,7 +31,7 @@ public:
 	/*UFUNCTION()
 	void OnExplode();*/
 
-	void SetVelocity(float LaunchSpeed, FVector Direction);
+	void SetVelocity(FVector Direction, FVector Velocity);
 
 	virtual void Tick(float DeltaTime) override;
 

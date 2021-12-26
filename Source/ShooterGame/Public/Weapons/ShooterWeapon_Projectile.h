@@ -43,5 +43,10 @@ protected:
 
 	/** spawn projectile on server */
 	UFUNCTION(reliable, server, WithValidation)
-	void ServerFireProjectile(FVector Origin, FVector_NetQuantizeNormal ShootDir, float LaunchSpeed = 0.0f);
+	void ServerFireProjectile(FVector Origin, FVector_NetQuantizeNormal ShootDir, FVector Velocity = FVector::ZeroVector);
+
+private:
+
+	UPROPERTY(EditDefaultsOnly, Category = "ShooterWeapon_Projectile", meta = (AllowPrivateAccess = "true"))
+	float GrenadeLaunchSpeed;
 };

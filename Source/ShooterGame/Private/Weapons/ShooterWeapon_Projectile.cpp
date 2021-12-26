@@ -8,6 +8,8 @@
 
 AShooterWeapon_Projectile::AShooterWeapon_Projectile(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
+
+	GrenadeLaunchSpeed = 4000.0f;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -29,8 +31,7 @@ void AShooterWeapon_Projectile::FireWeapon()
 		FVector OutLaunchVelocity = FVector::ZeroVector;
 		FVector StartLocation = Origin;
 		FVector HitLocation = Impact.ImpactPoint;
-		//GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red, FString::Printf(TEXT("HitLocation %s"), *HitLocation.ToString()));
-		float LaunchSpeed = 2000.0f;
+
 		FCollisionResponseParams DummyParams;
 		TArray<AActor*> DummyIgnores;
 
@@ -41,7 +42,7 @@ void AShooterWeapon_Projectile::FireWeapon()
 			OutLaunchVelocity,
 			StartLocation,
 			HitLocation,
-			LaunchSpeed,
+			GrenadeLaunchSpeed,
 			false,
 			0.f,
 			10.f,
@@ -50,7 +51,8 @@ void AShooterWeapon_Projectile::FireWeapon()
 		);
 
 		if (bHaveAimSolution) {
-			ServerFireProjectile(Origin, ShootDir, LaunchSpeed);
+			GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red, FString::Printf(TEXT("HitLocation %s"), *OutLaunchVelocity.ToString()));
+			ServerFireProjectile(Origin, ShootDir, OutLaunchVelocity);
 		}
 
 	}else if (ProjectileType == EProjectileType::PT_Projectile) {
@@ -99,12 +101,12 @@ void AShooterWeapon_Projectile::FireWeapon()
 	
 }
 
-bool AShooterWeapon_Projectile::ServerFireProjectile_Validate(FVector Origin, FVector_NetQuantizeNormal ShootDir, float LaunchSpeed = 0.0f)
+bool AShooterWeapon_Projectile::ServerFireProjectile_Validate(FVector Origin, FVector_NetQuantizeNormal ShootDir, FVector Velocity = FVector::ZeroVector)
 {
 	return true;
 }
 
-void AShooterWeapon_Projectile::ServerFireProjectile_Implementation(FVector Origin, FVector_NetQuantizeNormal ShootDir, float LaunchSpeed = 0.0f)
+void AShooterWeapon_Projectile::ServerFireProjectile_Implementation(FVector Origin, FVector_NetQuantizeNormal ShootDir, FVector Velocity = FVector::ZeroVector)
 {
 	
 	if (ProjectileType == EProjectileType::PT_Grenade) {
@@ -114,8 +116,8 @@ void AShooterWeapon_Projectile::ServerFireProjectile_Implementation(FVector Orig
 		{
 			Grenade->SetInstigator(GetInstigator());
 			Grenade->SetOwner(this);
-			//Grenade->InitVelocity(ShootDir);
-			Grenade->SetVelocity(LaunchSpeed, ShootDir);
+			Grenade->SetVelocity(ShootDir, Velocity);
+
 			UGameplayStatics::FinishSpawningActor(Grenade, SpawnTM);
 		}
 	}

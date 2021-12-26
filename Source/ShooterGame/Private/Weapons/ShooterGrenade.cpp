@@ -113,6 +113,7 @@ void AShooterGrenade::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActo
 		MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		CollisionComp->SetCollisionProfileName(TEXT("NoCollision"));
 		bIsSticked = true;
+		UnsetPickupText(ShooterBot);
 	}
 	else {
 		//CollisionComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
@@ -158,9 +159,9 @@ void AShooterGrenade::OnExplode(const FHitResult& HitResult)
 	}
 }
 
-void AShooterGrenade::SetVelocity(float LaunchSpeed, FVector Direction)
+void AShooterGrenade::SetVelocity(FVector Direction, FVector Velocity)
 {
-	MovementComp->SetVelocityInLocalSpace(Direction* LaunchSpeed); //FVector::ForwardVector
+	MovementComp->SetVelocityInLocalSpace(Velocity); //FVector::ForwardVector //Direction * LaunchSpeed
 	MovementComp->bRotationFollowsVelocity = true;
 	MovementComp->Activate();
 }
