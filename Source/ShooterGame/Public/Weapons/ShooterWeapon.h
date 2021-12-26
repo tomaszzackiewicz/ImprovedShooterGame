@@ -193,6 +193,8 @@ class AShooterWeapon : public AActor
 	/** get current ammo amount (clip) */
 	int32 GetCurrentAmmoInClip() const;
 
+	void AddToCurrentAmmoInClip();
+
 	/** get clip size */
 	int32 GetAmmoPerClip() const;
 

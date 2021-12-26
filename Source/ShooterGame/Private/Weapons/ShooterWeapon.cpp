@@ -961,6 +961,12 @@ int32 AShooterWeapon::GetCurrentAmmoInClip() const
 	return CurrentAmmoInClip;
 }
 
+void AShooterWeapon::AddToCurrentAmmoInClip()
+{
+	CurrentAmmo++;
+	CurrentAmmoInClip++;
+}
+
 int32 AShooterWeapon::GetAmmoPerClip() const
 {
 	return WeaponConfig.AmmoPerClip;

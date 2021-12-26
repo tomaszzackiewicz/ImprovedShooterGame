@@ -7,6 +7,8 @@
 #include "GameFramework/Actor.h"
 #include "ShooterGrenade.generated.h"
 
+class APickupText;
+
 UCLASS()
 class SHOOTERGAME_API AShooterGrenade : public AActor
 {
@@ -24,37 +26,56 @@ public:
 
 	/** handle hit */
 	UFUNCTION()
-	void OnImpact(const FHitResult& HitResult);
+	void OnExplode(const FHitResult& HitResult);
 
 	/*UFUNCTION()
 	void OnExplode();*/
 
 	void SetVelocity(float LaunchSpeed, FVector Direction);
 
-	UFUNCTION()
-	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit);
+	virtual void Tick(float DeltaTime) override;
+
+	void GivePickupTo(class AShooterCharacter* Pawn);
 
 private:
 	/** movement component */
-	UPROPERTY(VisibleDefaultsOnly, Category = Projectile)
+	UPROPERTY(VisibleDefaultsOnly, Category = "ShooterGrenade")
 	UProjectileMovementComponent* MovementComp;
 
 	/** collisions */
-	UPROPERTY(VisibleDefaultsOnly, Category = Projectile)
+	UPROPERTY(VisibleDefaultsOnly, Category = "ShooterGrenade")
 	USphereComponent* CollisionComp;
 
 	/** rendering */
-	UPROPERTY(VisibleDefaultsOnly, Category = Projectile)
+	UPROPERTY(VisibleDefaultsOnly, Category = "ShooterGrenade")
 	UStaticMeshComponent* MeshComp;
 
-	UPROPERTY(VisibleDefaultsOnly, Category = Projectile)
+	UPROPERTY(VisibleDefaultsOnly, Category = "ShooterGrenade")
+	USphereComponent* InteractionComp;
+
+	UPROPERTY(VisibleDefaultsOnly, Category = "ShooterGrenade")
 	UParticleSystemComponent* ParticleComp;
 
 protected:
 
+	UFUNCTION()
+	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit);
+
+	UFUNCTION()
+	void OnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+	void OnEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
 	/** effects for explosion */
-	UPROPERTY(EditDefaultsOnly, Category = Effects)
+	UPROPERTY(EditDefaultsOnly, Category = "ShooterGrenade")
 	TSubclassOf<class AShooterExplosionEffect> ExplosionTemplate;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "ShooterGrenade")
+	TSubclassOf<class APickupText> PickupTextClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ShooterGrenade")
+	TSubclassOf<AShooterWeapon> WeaponType;
 
 	/** controller that fired me (cache for damage calculations) */
 	TWeakObjectPtr<AController> MyController;
@@ -79,6 +100,10 @@ protected:
 	/** update velocity on client */
 	virtual void PostNetReceiveVelocity(const FVector& NewVelocity) override;
 
+	void SetPickupText(class AShooterCharacter* ShooterCharacterParam);
+
+	void UnsetPickupText(class AShooterCharacter* ShooterCharacterParam);
+
 protected:
 	/** Returns MovementComp subobject **/
 	FORCEINLINE UProjectileMovementComponent* GetMovementComp() const { return MovementComp; }
@@ -87,4 +112,15 @@ protected:
 	/** Returns ParticleComp subobject **/
 	FORCEINLINE UParticleSystemComponent* GetParticleComp() const { return ParticleComp; }
 
+private:
+
+	UPROPERTY(EditDefaultsOnly, Category = "ShooterGrenade", meta = (AllowPrivateAccess = "true"))
+	float ExplosionTime = 5.0f;
+
+	UPROPERTY()
+	APickupText* CurrentPickupText;
+
+	bool bIsSticked;
+
+	FTimerHandle ExplodeTimerHandle;
 };

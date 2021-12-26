@@ -7,30 +7,38 @@
 #include "Weapons/ShooterWeapon_Projectile.h"
 #include "Components/StaticMeshComponent.h"
 #include "Bots/ShooterBot.h"
+#include "Player/ShooterCharacter.h"
+#include "Pickups/PickupText.h"
 
 // Sets default values
 AShooterGrenade::AShooterGrenade()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = false;
 
 	CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("ProjectileCollision"));
 	CollisionComp->InitSphereRadius(5.0f);
 	CollisionComp->AlwaysLoadOnClient = true;
 	CollisionComp->AlwaysLoadOnServer = true;
 	CollisionComp->bTraceComplexOnMove = true;
-	CollisionComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	//CollisionComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	CollisionComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	CollisionComp->SetCollisionObjectType(COLLISION_PROJECTILE);
 	CollisionComp->SetCollisionResponseToAllChannels(ECR_Ignore);
 	CollisionComp->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
 	CollisionComp->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);
-	CollisionComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+	CollisionComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
 	RootComponent = CollisionComp;
 
 	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComp"));
 	MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	//MeshComp->SetCollisionResponseToAllChannels(ECR_Block);
+	MeshComp->SetCollisionResponseToAllChannels(ECR_Ignore);
 	MeshComp->SetupAttachment(RootComponent);
+
+	InteractionComp = CreateDefaultSubobject<USphereComponent>(TEXT("InteractionComp"));
+	InteractionComp->InitSphereRadius(300.0f);
+	InteractionComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	InteractionComp->SetCollisionResponseToAllChannels(ECR_Ignore);
+	InteractionComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	InteractionComp->SetupAttachment(RootComponent);
 
 	ParticleComp = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("ParticleComp"));
 	ParticleComp->bAutoActivate = false;
@@ -50,6 +58,7 @@ AShooterGrenade::AShooterGrenade()
 	SetRemoteRoleForBackwardsCompat(ROLE_SimulatedProxy);
 	bReplicates = true;
 	SetReplicatingMovement(true);
+	bIsSticked = false;
 
 }
 
@@ -69,6 +78,20 @@ void AShooterGrenade::PostInitializeComponents()
 	MyController = GetInstigatorController();
 
 	CollisionComp->OnComponentHit.AddDynamic(this, &AShooterGrenade::OnHit);
+
+	InteractionComp->OnComponentBeginOverlap.AddDynamic(this, &AShooterGrenade::OnBeginOverlap);
+	InteractionComp->OnComponentEndOverlap.AddDynamic(this, &AShooterGrenade::OnEndOverlap);
+}
+
+void AShooterGrenade::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (CurrentPickupText) {
+		FVector ShooterGrenadeLoc = this->GetActorLocation();
+		FVector LocWithOffset =  ShooterGrenadeLoc + FVector(0.0f, 0.0f, 100.0f);
+		CurrentPickupText->SetActorLocation(LocWithOffset);
+	}
 }
 
 void AShooterGrenade::InitVelocity(FVector& ShootDirection)
@@ -89,26 +112,44 @@ void AShooterGrenade::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActo
 		this->AttachToComponent(ShooterBot->GetMesh(), FAttachmentTransformRules::KeepWorldTransform, BoneName);
 		MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		CollisionComp->SetCollisionProfileName(TEXT("NoCollision"));
+		bIsSticked = true;
 	}
 	else {
+		//CollisionComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		CollisionComp->SetCollisionObjectType(ECollisionChannel::ECC_PhysicsBody);
-		CollisionComp->SetCollisionProfileName(TEXT("BlockAll"));
+		CollisionComp->SetCollisionProfileName(TEXT("PhysicsActor"));
 		CollisionComp->SetSimulatePhysics(true);
 	}
 
-	/*FTimerHandle Timer;
-	GetWorld()->GetTimerManager().SetTimer(Timer, this, &AShooterGrenade::OnExplode, 3.0f, false);*/
-
 	FTimerDelegate TimerDel;
-	FTimerHandle TimerHandle;
 
 	//Binding the function with specific values
-	TimerDel.BindUFunction(this, FName("OnImpact"), Hit);
+	TimerDel.BindUFunction(this, FName("OnExplode"), Hit);
 	//Calling MyUsefulFunction after 5 seconds without looping
-	GetWorld()->GetTimerManager().SetTimer(TimerHandle, TimerDel, 3.0f, false);
+	GetWorld()->GetTimerManager().SetTimer(ExplodeTimerHandle, TimerDel, ExplosionTime, false);
 }
 
-void AShooterGrenade::OnImpact(const FHitResult& HitResult)
+void AShooterGrenade::OnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (OtherActor && (OtherActor != this)) {
+		AShooterCharacter* ShooterCharacter = Cast<AShooterCharacter>(OtherActor);
+		if (ShooterCharacter && (!CurrentPickupText)) {
+			SetPickupText(ShooterCharacter);
+		}
+	}
+}
+
+void AShooterGrenade::OnEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	if (OtherActor && (OtherActor != this)) {
+		AShooterCharacter* ShooterCharacter = Cast<AShooterCharacter>(OtherActor);
+		if (ShooterCharacter) {
+			UnsetPickupText(ShooterCharacter);
+		}
+	}
+}
+
+void AShooterGrenade::OnExplode(const FHitResult& HitResult)
 {
 	if (GetLocalRole() == ROLE_Authority && !bExploded)
 	{
@@ -117,21 +158,11 @@ void AShooterGrenade::OnImpact(const FHitResult& HitResult)
 	}
 }
 
-//void AShooterGrenade::OnExplode(){
-//
-//	if (GetLocalRole() == ROLE_Authority && !bExploded){
-//		Explode(HitResult);
-//		DisableAndDestroy();
-//	}
-//}
-
 void AShooterGrenade::SetVelocity(float LaunchSpeed, FVector Direction)
 {
-	//MovementComp->Velocity = VelocityParam;
 	MovementComp->SetVelocityInLocalSpace(Direction* LaunchSpeed); //FVector::ForwardVector
 	MovementComp->bRotationFollowsVelocity = true;
 	MovementComp->Activate();
-	//LaunchBlast->Activate();
 }
 
 void AShooterGrenade::Explode(const FHitResult& Impact)
@@ -217,3 +248,88 @@ void AShooterGrenade::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& Ou
 	DOREPLIFETIME(AShooterGrenade, bExploded);
 }
 
+void AShooterGrenade::SetPickupText(class AShooterCharacter* ShooterCharacterParam)
+{
+	if (bIsSticked) {
+		return;
+	}
+
+	if (CurrentPickupText) {
+		return;
+	}
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	CurrentPickupText = GetWorld()->SpawnActor<APickupText>(PickupTextClass, this->GetActorLocation(), FRotator::ZeroRotator, SpawnParams);
+	if (CurrentPickupText && ShooterCharacterParam) {
+		ShooterCharacterParam->SetCurrentShooterGrenade(this);
+	}
+}
+
+void AShooterGrenade::UnsetPickupText(class AShooterCharacter* ShooterCharacterParam)
+{
+	if (CurrentPickupText && ShooterCharacterParam) {
+		ShooterCharacterParam->SetCurrentShooterGrenade(nullptr);
+		CurrentPickupText->Destroy();
+		CurrentPickupText = nullptr;
+	}
+}
+
+void AShooterGrenade::GivePickupTo(class AShooterCharacter* Pawn)
+{
+	GetWorld()->GetTimerManager().ClearTimer(ExplodeTimerHandle);
+
+	AShooterWeapon* Weapon = (Pawn ? Pawn->FindWeapon(WeaponType) : NULL);
+	if (!Weapon) {
+		return;
+	}
+
+	AShooterWeapon_Projectile* ShooterWeapon_Projectile = Cast<AShooterWeapon_Projectile>(Weapon);
+	if (ShooterWeapon_Projectile){
+		ShooterWeapon_Projectile->AddToCurrentAmmoInClip();
+
+		// Fire event for collected ammo
+		if (Pawn){
+			/*const UWorld* World = GetWorld();
+			const IOnlineEventsPtr Events = Online::GetEventsInterface(World);
+			const IOnlineIdentityPtr Identity = Online::GetIdentityInterface(World);*/
+
+			//if (Events.IsValid() && Identity.IsValid())
+			//{
+			//	AShooterPlayerController* PC = Cast<AShooterPlayerController>(Pawn->Controller);
+			//	if (PC)
+			//	{
+			//		ULocalPlayer* LocalPlayer = Cast<ULocalPlayer>(PC->Player);
+
+			//		if (LocalPlayer)
+			//		{
+			//			const int32 UserIndex = LocalPlayer->GetControllerId();
+			//			TSharedPtr<const FUniqueNetId> UniqueID = Identity->GetUniquePlayerId(UserIndex);
+			//			if (UniqueID.IsValid())
+			//			{
+			//				FVector Location = Pawn->GetActorLocation();
+
+			//				FOnlineEventParms Params;
+
+			//				Params.Add(TEXT("SectionId"), FVariantData((int32)0)); // unused
+			//				Params.Add(TEXT("GameplayModeId"), FVariantData((int32)1)); // @todo determine game mode (ffa v tdm)
+			//				Params.Add(TEXT("DifficultyLevelId"), FVariantData((int32)0)); // unused
+
+			//				Params.Add(TEXT("ItemId"), FVariantData((int32)Weapon->GetAmmoType() + 1)); // @todo come up with a better way to determine item id, currently health is 0 and ammo counts from 1
+			//				Params.Add(TEXT("AcquisitionMethodId"), FVariantData((int32)0)); // unused
+			//				Params.Add(TEXT("LocationX"), FVariantData(Location.X));
+			//				Params.Add(TEXT("LocationY"), FVariantData(Location.Y));
+			//				Params.Add(TEXT("LocationZ"), FVariantData(Location.Z));
+			//				Params.Add(TEXT("ItemQty"), FVariantData((int32)Qty));
+
+			//				Events->TriggerEvent(*UniqueID, TEXT("CollectPowerup"), Params);
+			//			}
+			//		}
+			//	}
+			//}
+		}
+	}
+
+	this->Destroy();
+}

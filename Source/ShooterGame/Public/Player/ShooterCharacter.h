@@ -397,6 +397,12 @@ private:
 	//////////////////////////////////////////////////////////////////////////
 	// Damage & death
 
+	UFUNCTION()
+	void OnPickup();
+
+	UPROPERTY()
+	class AShooterGrenade* CurrentAShooterGrenade;
+
 public:
 
 	/** Identifies if pawn is in its dying state */
@@ -434,6 +440,9 @@ public:
 
 	/** Called on the actor right before replication occurs */
 	virtual void PreReplication(IRepChangedPropertyTracker & ChangedPropertyTracker) override;
+
+	void SetCurrentShooterGrenade(class AShooterGrenade* ShooterGrenadeParam);
+
 protected:
 	/** notification when killed, for both the server and client. */
 	virtual void OnDeath(float KillingDamage, struct FDamageEvent const& DamageEvent, class APawn* InstigatingPawn, class AActor* DamageCauser);

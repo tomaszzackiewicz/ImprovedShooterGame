@@ -9,6 +9,8 @@
 #include "Animation/AnimInstance.h"
 #include "Sound/SoundNodeLocalPlayer.h"
 #include "AudioThread.h"
+#include "..\..\Public\Player\ShooterCharacter.h"
+#include "Weapons/ShooterGrenade.h"
 
 static int32 NetVisualizeRelevancyTestPoints = 0;
 FAutoConsoleVariableRef CVarNetVisualizeRelevancyTestPoints(
@@ -554,6 +556,14 @@ bool AShooterCharacter::IsMoving()
 	return FMath::Abs(GetLastMovementInputVector().Size()) > 0.f;
 }
 
+void AShooterCharacter::OnPickup()
+{
+	if (CurrentAShooterGrenade) {
+		CurrentAShooterGrenade->GivePickupTo(this);
+		CurrentAShooterGrenade = nullptr;
+	}
+}
+
 //////////////////////////////////////////////////////////////////////////
 // Inventory
 
@@ -884,6 +894,8 @@ void AShooterCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerI
 	PlayerInputComponent->BindAction("Run", IE_Pressed, this, &AShooterCharacter::OnStartRunning);
 	PlayerInputComponent->BindAction("RunToggle", IE_Pressed, this, &AShooterCharacter::OnStartRunningToggle);
 	PlayerInputComponent->BindAction("Run", IE_Released, this, &AShooterCharacter::OnStopRunning);
+
+	PlayerInputComponent->BindAction("Pickup", IE_Pressed, this, &AShooterCharacter::OnPickup);
 }
 
 
@@ -1174,6 +1186,11 @@ void AShooterCharacter::PreReplication(IRepChangedPropertyTracker & ChangedPrope
 
 	// Only replicate this property for a short duration after it changes so join in progress players don't get spammed with fx when joining late
 	DOREPLIFETIME_ACTIVE_OVERRIDE(AShooterCharacter, LastTakeHitInfo, GetWorld() && GetWorld()->GetTimeSeconds() < LastTakeHitTimeTimeout);
+}
+
+void AShooterCharacter::SetCurrentShooterGrenade(AShooterGrenade* ShooterGrenadeParam)
+{
+	CurrentAShooterGrenade = ShooterGrenadeParam;
 }
 
 void AShooterCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
