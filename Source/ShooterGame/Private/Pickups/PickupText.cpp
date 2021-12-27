@@ -2,6 +2,8 @@
 
 #include "ShooterGame.h"
 #include "Pickups/PickupText.h"
+#include "Components/MaterialBillboardComponent.h"
+#include "Components/SceneComponent.h"
 
 // Sets default values
 APickupText::APickupText()
@@ -9,7 +11,11 @@ APickupText::APickupText()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 
+	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+	RootComponent = Root;
+
 	MaterialBillboardComponent = CreateDefaultSubobject<UMaterialBillboardComponent>(TEXT("MaterialBillboardComponent"));
+	MaterialBillboardComponent->SetRelativeLocation(FVector(0));
 	MaterialBillboardComponent->SetupAttachment(RootComponent);
 }
 

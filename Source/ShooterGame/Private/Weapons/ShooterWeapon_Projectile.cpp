@@ -10,6 +10,7 @@ AShooterWeapon_Projectile::AShooterWeapon_Projectile(const FObjectInitializer& O
 {
 
 	GrenadeLaunchSpeed = 4000.0f;
+	bIsRocketUsed = false;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -51,7 +52,7 @@ void AShooterWeapon_Projectile::FireWeapon()
 		);
 
 		if (bHaveAimSolution) {
-			GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red, FString::Printf(TEXT("HitLocation %s"), *OutLaunchVelocity.ToString()));
+			//GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red, FString::Printf(TEXT("HitLocation %s"), *OutLaunchVelocity.ToString()));
 			ServerFireProjectile(Origin, ShootDir, OutLaunchVelocity);
 		}
 
@@ -99,6 +100,18 @@ void AShooterWeapon_Projectile::FireWeapon()
 	}
 	
 	
+}
+
+void AShooterWeapon_Projectile::ToggleProjectileType()
+{
+	bIsRocketUsed = !bIsRocketUsed;
+
+	if (bIsRocketUsed) {
+		ProjectileType = EProjectileType::PT_Projectile;
+	}else {
+		ProjectileType = EProjectileType::PT_Grenade;
+	}
+
 }
 
 bool AShooterWeapon_Projectile::ServerFireProjectile_Validate(FVector Origin, FVector_NetQuantizeNormal ShootDir, FVector Velocity = FVector::ZeroVector)

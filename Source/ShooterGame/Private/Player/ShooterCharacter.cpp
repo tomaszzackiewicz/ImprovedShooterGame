@@ -11,6 +11,7 @@
 #include "AudioThread.h"
 #include "..\..\Public\Player\ShooterCharacter.h"
 #include "Weapons/ShooterGrenade.h"
+#include "Weapons/ShooterWeapon_Projectile.h"
 
 static int32 NetVisualizeRelevancyTestPoints = 0;
 FAutoConsoleVariableRef CVarNetVisualizeRelevancyTestPoints(
@@ -564,6 +565,18 @@ void AShooterCharacter::OnPickup()
 	}
 }
 
+void AShooterCharacter::OnChangeAmmoType()
+{
+	AShooterWeapon* Weapon = (this ? this->FindWeapon(WeaponType) : NULL);
+	if (!Weapon) {
+		return;
+	}
+	AShooterWeapon_Projectile* ShooterWeapon_Projectile = Cast<AShooterWeapon_Projectile>(Weapon);
+	if (ShooterWeapon_Projectile) {
+		ShooterWeapon_Projectile->ToggleProjectileType();
+	}
+}
+
 //////////////////////////////////////////////////////////////////////////
 // Inventory
 
@@ -894,8 +907,9 @@ void AShooterCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerI
 	PlayerInputComponent->BindAction("Run", IE_Pressed, this, &AShooterCharacter::OnStartRunning);
 	PlayerInputComponent->BindAction("RunToggle", IE_Pressed, this, &AShooterCharacter::OnStartRunningToggle);
 	PlayerInputComponent->BindAction("Run", IE_Released, this, &AShooterCharacter::OnStopRunning);
-
+	
 	PlayerInputComponent->BindAction("Pickup", IE_Pressed, this, &AShooterCharacter::OnPickup);
+	PlayerInputComponent->BindAction("AmmoType", IE_Pressed, this, &AShooterCharacter::OnChangeAmmoType);
 }
 
 

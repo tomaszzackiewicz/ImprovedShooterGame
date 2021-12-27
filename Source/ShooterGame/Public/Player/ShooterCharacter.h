@@ -400,6 +400,9 @@ private:
 	UFUNCTION()
 	void OnPickup();
 
+	UFUNCTION()
+	void OnChangeAmmoType();
+
 	UPROPERTY()
 	class AShooterGrenade* CurrentAShooterGrenade;
 
@@ -442,6 +445,9 @@ public:
 	virtual void PreReplication(IRepChangedPropertyTracker & ChangedPropertyTracker) override;
 
 	void SetCurrentShooterGrenade(class AShooterGrenade* ShooterGrenadeParam);
+
+	UPROPERTY(EditDefaultsOnly, Category = "ShooterCharacter")
+	TSubclassOf<class AShooterWeapon> WeaponType;
 
 protected:
 	/** notification when killed, for both the server and client. */

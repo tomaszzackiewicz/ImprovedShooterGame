@@ -105,15 +105,15 @@ void AShooterGrenade::InitVelocity(FVector& ShootDirection)
 void AShooterGrenade::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit)
 {
 
-	AShooterBot* ShooterBot = Cast<AShooterBot>(OtherActor);
-	if (ShooterBot) {
+	AShooterCharacter* ShooterCharacter = Cast<AShooterCharacter>(OtherActor);
+	if (ShooterCharacter) {
 		FVector ImpactPointLoc = Hit.ImpactPoint;// -(this->GetActorForwardVector() * 50.0f);
 		FName BoneName = Hit.BoneName;
-		this->AttachToComponent(ShooterBot->GetMesh(), FAttachmentTransformRules::KeepWorldTransform, BoneName);
+		this->AttachToComponent(ShooterCharacter->GetMesh(), FAttachmentTransformRules::KeepWorldTransform, BoneName);
 		MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		CollisionComp->SetCollisionProfileName(TEXT("NoCollision"));
 		bIsSticked = true;
-		UnsetPickupText(ShooterBot);
+		UnsetPickupText(ShooterCharacter);
 	}
 	else {
 		//CollisionComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
@@ -159,13 +159,6 @@ void AShooterGrenade::OnExplode(const FHitResult& HitResult)
 	}
 }
 
-void AShooterGrenade::SetVelocity(FVector Direction, FVector Velocity)
-{
-	MovementComp->SetVelocityInLocalSpace(Velocity); //FVector::ForwardVector //Direction * LaunchSpeed
-	MovementComp->bRotationFollowsVelocity = true;
-	MovementComp->Activate();
-}
-
 void AShooterGrenade::Explode(const FHitResult& Impact)
 {
 	if (ParticleComp)
@@ -180,6 +173,7 @@ void AShooterGrenade::Explode(const FHitResult& Impact)
 	if (WeaponConfig.ExplosionDamage > 0 && WeaponConfig.ExplosionRadius > 0 && WeaponConfig.DamageType)
 	{
 		UGameplayStatics::ApplyRadialDamage(this, WeaponConfig.ExplosionDamage, NudgedImpactLocation, WeaponConfig.ExplosionRadius, WeaponConfig.DamageType, TArray<AActor*>(), this, MyController.Get());
+		GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Blue, FString::Printf(TEXT("ppppppppppppppppppppp")));
 	}
 
 	if (ExplosionTemplate)
@@ -247,6 +241,13 @@ void AShooterGrenade::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& Ou
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AShooterGrenade, bExploded);
+}
+
+void AShooterGrenade::SetVelocity(FVector Direction, FVector Velocity)
+{
+	MovementComp->SetVelocityInLocalSpace(Velocity); //FVector::ForwardVector //Direction * LaunchSpeed
+	MovementComp->bRotationFollowsVelocity = true;
+	MovementComp->Activate();
 }
 
 void AShooterGrenade::SetPickupText(class AShooterCharacter* ShooterCharacterParam)

@@ -49,4 +49,10 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "ShooterWeapon_Projectile", meta = (AllowPrivateAccess = "true"))
 	float GrenadeLaunchSpeed;
+
+	bool bIsRocketUsed;
+
+public:
+
+	void ToggleProjectileType();
 };

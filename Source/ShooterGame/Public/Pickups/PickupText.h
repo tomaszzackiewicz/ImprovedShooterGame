@@ -25,6 +25,9 @@ public:
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "PickupText", meta = (AllowPrivateAccess = "true"))
+	class USceneComponent* Root;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "PickupText", meta = (AllowPrivateAccess = "true"))
 	class UMaterialBillboardComponent* MaterialBillboardComponent;
 
 };
